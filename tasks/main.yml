@@ -10,5 +10,10 @@
   register: result
 
 - name: start an hdfs-datanode container
-  command: docker run -d -h {{ ansible_hostname }}  --dns {{ ansible_docker0.ipv4.address }} --dns 8.8.8.8 --dns-search node.dc1.consul  -p={{ datanode_http_port }}:{{ datanode_http_port }} -p={{ datanode_port }}:{{ datanode_port }} -p={{ datanode_ipc_port }}:{{ datanode_ipc_port }} -v {{ ext_hadoop_volume }}:/var/hadoop -v {{ ext_hadoop_conf_volume }}:/hadoop/conf -name hdfs-datanode gitinsky/hdfs-datanode:0.1.0
+  command: docker run -d {% if docker_net_false|default(False) %} -n=false -v {{ ext_hadoop_conf_volume }}/hosts:/etc/hosts {% endif %} -h {{ ansible_hostname }}{% if docker_net_false|default(False) %}-dn{% endif %} --dns {{ ansible_docker0.ipv4.address }} --dns {{ docker_dns_2 }} --dns-search node.dc1.consul  -p={{ datanode_http_port }}:{{ datanode_http_port }} -p={{ datanode_port }}:{{ datanode_port }} -p={{ datanode_ipc_port }}:{{ datanode_ipc_port }} -v {{ ext_hadoop_volume }}:/var/hadoop -v {{ ext_hadoop_conf_volume }}:/hadoop/conf -name hdfs-datanode gitinsky/hdfs-datanode:0.1.1
+  register: docker_id
   when: result|failed
+
+- name: start network
+  shell: /root/ovswork.sh br10 {{ docker_id.stdout }} {{ network_map[ '' + ansible_hostname + '-dn' ] }}/24 {{ network_map[ '_broadcast' ] }} {{ network_map['_gateway'] }}
+  when: (docker_id.changed == True) and (docker_net_false|default(False) == True)
