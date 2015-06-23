@@ -14,7 +14,10 @@
 
 - name: start an hdfs-datanode container
   command: docker run -d
-              {% if docker_net_false|default(False) %} -n=false -v {{ ext_hadoop_conf_volume }}/hosts:/etc/hosts {% endif %}
+              {% if docker_net_false|default(False) %} -n=false
+                 -v {{ ext_hadoop_conf_volume }}/hosts:/etc/hosts
+                 -v {{ ext_hadoop_conf_volume }}/resolv.conf:/etc/resolv.conf
+              {% endif %}
               -h {{ ansible_hostname }}{% if docker_net_false|default(False) %}-dn{% endif %}
               --dns {{ docker_dns_2 }}
               --dns {{ ansible_docker0.ipv4.address }}
