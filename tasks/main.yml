@@ -4,13 +4,28 @@
 - name: create ext volume for configs
   file: state=directory path={{ ext_hadoop_conf_volume }}
 
+- name: create ext volume for logs
+  file: state=directory path={{ ext_hadoop_logs_volume }}
+
 - name: check if a hdfs-datanode container is started
   command: bash -c "docker ps | grep hdfs-datanode"
   ignore_errors: True
   register: result
 
 - name: start an hdfs-datanode container
-  command: docker run -d {% if docker_net_false|default(False) %} -n=false -v {{ ext_hadoop_conf_volume }}/hosts:/etc/hosts {% endif %} -h {{ ansible_hostname }}{% if docker_net_false|default(False) %}-dn{% endif %} --dns {{ ansible_docker0.ipv4.address }} --dns {{ docker_dns_2 }} --dns-search node.dc1.consul  -p={{ datanode_http_port }}:{{ datanode_http_port }} -p={{ datanode_port }}:{{ datanode_port }} -p={{ datanode_ipc_port }}:{{ datanode_ipc_port }} -v {{ ext_hadoop_volume }}:/var/hadoop -v {{ ext_hadoop_conf_volume }}:/hadoop/conf -name hdfs-datanode gitinsky/hdfs-datanode:0.1.1
+  command: docker run -d
+              {% if docker_net_false|default(False) %} -n=false -v {{ ext_hadoop_conf_volume }}/hosts:/etc/hosts {% endif %}
+              -h {{ ansible_hostname }}{% if docker_net_false|default(False) %}-dn{% endif %}
+              --dns {{ docker_dns_2 }}
+              --dns {{ ansible_docker0.ipv4.address }}
+              --dns-search node.dc1.consul
+              -p={{ datanode_http_port }}:{{ datanode_http_port }}
+              -p={{ datanode_port }}:{{ datanode_port }}
+              -p={{ datanode_ipc_port }}:{{ datanode_ipc_port }}
+              -v {{ ext_hadoop_volume }}:/var/hadoop
+              -v {{ ext_hadoop_conf_volume }}:/hadoop/conf
+              -v {{ ext_hadoop_logs_volume }}:/var/log/hdfs
+              --name=hdfs-datanode gitinsky/hdfs-datanode:0.1.2
   register: docker_id
   when: result|failed
 
